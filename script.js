@@ -62,9 +62,12 @@ const postMessageMRReady = (data) => {
     let mr_name = data.merge_request.title;
     let project_name = data.merge_request.target.name;
 
+    // Determine the channel based on the project
+    const channel = PROJECT_CHANNEL_MAP.get(project_name) || 'general';
+
     return {
         content: {
-            channel: '#stacks-merge-requestss',
+            channel: `#${channel}`,
             username: `gitlab/${data.merge_request.target.name}`,
             icon_url: CONFIG.GITLAB_LOGO_URL,
             text: '@all the merge request "' + mr_name + '" is ready for project ' + project_name + '\n' + assigneeAt,
@@ -168,10 +171,14 @@ class Script {
             assigned = `*Assigned to*: @${data.assignee.username}\n`;
         }
 
+        // Determine the channel based on the project
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+
         return {
             content: {
                 username: `gitlab/${project.name}`,
                 icon_url: project.avatar_url || data.user.avatar_url || '',
+                channel: `#${channel}`,
                 text: (data.assignee && data.assignee.name !== data.user.name) ? atName(data.assignee) : '',
                 attachments: [
                     makeAttachment(
@@ -242,12 +249,15 @@ class Script {
             };
         }
 
+        // Determine the channel based on the project
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+
         return {
             content: {
                 username: `gitlab/${project.name}`,
                 icon_url: project.avatar_url || user.avatar_url || '',
                 text: at.join(' '),
-                channel: "#dev",
+                channel: `#${channel}`,
                 attachments: [
                     makeAttachment(user, `${text} on ${project.name}.\n*Comment:* ${comment.note}.\nSee: ${comment.url}`)
                 ]
@@ -265,6 +275,10 @@ class Script {
         const checkout_sha = data.checkout_sha;
         let text = '';
         const at = [];
+
+        // Determine the channel based on the project
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+        console.log(`Push event for project ${project.name} routing to channel #${channel}`);
 
         if (checkout_sha === null) {
             text = `${user} deleted branch ${ref} at ${project.name}`;
@@ -295,6 +309,7 @@ class Script {
             content: {
                 username: `gitlab/${project.name}`,
                 icon_url: project.avatar_url || '',
+                channel: `#${channel}`,
                 attachments: [
                     {
                         author_name: displayName(user.name),
@@ -326,10 +341,14 @@ class Script {
             }
         }
 
+        // Determine the channel based on the project
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+
         return {
             content: {
                 username: `gitlab/${project.name}`,
                 icon_url: project.avatar_url || '',
+                channel: `#${channel}`,
                 text: at.join(' '),
                 attachments: [
                     makeAttachment(
@@ -350,11 +369,15 @@ class Script {
         const ref = refParser(data.ref);
         const author = data.user_name || data.user;
         const text = `${author} pushed tag ${ref} to ${project.name}`;
+        
+        // Determine the channel based on the project
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+        
         return {
             content: {
                 username: `gitlab/${project.name}`,
                 icon_url: project.avatar_url || '',
-                channel: "#Stacks-CS",
+                channel: `#${channel}`,
                 attachments: [
                     makeAttachment(
                         data.user,
@@ -381,10 +404,11 @@ class Script {
 
         console.log("Merge Status:", mr.detailed_merge_status);
 
+        // Determine the channel based on the project
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+
         // Watch for merge status triggers
-        let channel;
         if (status === "request_changes" || status === "mergeable") {
-            channel = "#stacks-merge-requests";
             text = `🔁 ${at.join(' ')} — MR _${mr.title}_ is now **${status}**`;
         }
 
@@ -392,7 +416,7 @@ class Script {
             content: {
                 username: `gitlab/${project.name}`,
                 icon_url: project.avatar_url || '',
-                ...(channel ? { channel } : {}),
+                channel: `#${channel}`,
                 text: at.join(' '),
                 attachments: [
                     makeAttachment(
