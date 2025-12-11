@@ -201,21 +201,8 @@ class Script {
         let text;
 
         if (data.merge_request) {
-            console.log("MERGE REQUEST")
-            if (data.object_attributes.note === "Ready") {
-                return postMessageMRReady(data);
-            }
-            const mr = data.merge_request;
-            const lastCommitAuthor = mr.last_commit && mr.last_commit.author;
-            if (mr.assignee && mr.assignee.name !== user.name) {
-                pushUniq(at, atName(mr.assignee));
-            }
-            if (lastCommitAuthor && lastCommitAuthor.name !== user.name) {
-                pushUniq(at, atName(lastCommitAuthor));
-            }
-            text = `New comment on MR _${mr.title}_`;
-            console.log("Text is " + text);
-            console.log("At is " + at);
+            // Don't post notifications for comments on merge requests
+            return false;
         } else if (data.issue) {
             const issue = data.issue;
             if (issue.assignee && issue.assignee.name !== user.name) {
@@ -393,42 +380,84 @@ class Script {
         const mr = data.object_attributes;
         const user = data.user;
         const state = mr.state;
-        const at = [];
         const status = mr.detailed_merge_status;
-        let text = `${state} MR _${mr.title}_`;
-
-        if (mr.assignee && mr.assignee.name !== user.name) {
-            pushUniq(at, atName(mr.assignee));
-        }
 
         console.log("Merge Status:", mr.detailed_merge_status);
 
         // Determine the channel based on the project
         const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
 
-        // Watch for merge status triggers
-        if (status === "request_changes" || status === "mergeable") {
-            text = `🔁 ${at.join(' ')} — MR _${mr.title}_ is now **${status}**`;
+        // Get priority label if available
+        const priorityLabel = mr.labels?.find(label => label.title?.startsWith('Priority'));
+        const priority = priorityLabel?.title || "Not Urgent";
+
+        // Only post notifications for specific merge status changes
+        if (status === "mergeable") {
+            // MR is ready - notify everyone with @all
+            return {
+                content: {
+                    username: `gitlab/${project.name}`,
+                    icon_url: project.avatar_url || '',
+                    channel: `#${channel}`,
+                    text: `@all The merge request "${mr.title}" is ready for review on ${project.name}`,
+                    attachments: [
+                        {
+                            author_name: user ? displayName(user.name) : '',
+                            author_icon: user ? user.avatar_url : '',
+                            fields: [
+                                {
+                                    title: 'Merge Request URL',
+                                    value: mr.url,
+                                    short: false
+                                },
+                                {
+                                    title: 'Description',
+                                    value: mr.description || 'No description provided',
+                                    short: false
+                                },
+                                {
+                                    title: 'Priority',
+                                    value: priority,
+                                    short: true
+                                },
+                                {
+                                    title: 'Author',
+                                    value: user ? user.name : 'Unknown',
+                                    short: true
+                                }
+                            ],
+                            color: CONFIG.NOTIF_COLOR
+                        }
+                    ]
+                }
+            };
+        } else if (status === "request_changes") {
+            // Changes requested - notify assignee
+            const at = [];
+            if (mr.assignee && mr.assignee.name !== user.name) {
+                pushUniq(at, atName(mr.assignee));
+            }
+            
+            return {
+                content: {
+                    username: `gitlab/${project.name}`,
+                    icon_url: project.avatar_url || '',
+                    channel: `#${channel}`,
+                    text: at.join(' '),
+                    attachments: [
+                        makeAttachment(
+                            user,
+                            `Changes requested on MR _${mr.title}_ on ${project.name}.
+                            *Description:* ${mr.description || 'No description provided'}.
+                            *Priority:* ${priority}.
+                            See: ${mr.url}`
+                        )
+                    ]
+                }
+            };
         }
 
-        return {
-            content: {
-                username: `gitlab/${project.name}`,
-                icon_url: project.avatar_url || '',
-                channel: `#${channel}`,
-                text: at.join(' '),
-                attachments: [
-                    makeAttachment(
-                        user,
-                        `${text} on ${project.name}.
-                        *Description:* ${mr.description}.
-                        *State:* ${mr.state}.
-                        *Action:* ${mr.action}.
-                        *Merge Status:* ${status}.
-                        See: ${mr.url}`
-                    )
-                ]
-            }
-        };
+        // Don't post for other merge request events
+        return false;
     }
 }
