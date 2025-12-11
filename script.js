@@ -278,7 +278,6 @@ class Script {
 
         // Determine the channel based on the project
         const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
-        console.log(`Push event for project ${project.name} routing to channel #${channel}`);
 
         if (checkout_sha === null) {
             text = `${user} deleted branch ${ref} at ${project.name}`;
