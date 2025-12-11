@@ -388,7 +388,7 @@ class Script {
         const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
 
         // Get priority label if available
-        const priorityLabel = mr.labels?.find(label => label.title?.startsWith('Priority'));
+        const priorityLabel = mr.labels?.find(label => label?.title?.startsWith('Priority'));
         const priority = priorityLabel?.title || "Not Urgent";
 
         // Only post notifications for specific merge status changes
@@ -448,9 +448,9 @@ class Script {
                         makeAttachment(
                             user,
                             `Changes requested on MR _${mr.title}_ on ${project.name}.
-                            *Description:* ${mr.description || 'No description provided'}.
-                            *Priority:* ${priority}.
-                            See: ${mr.url}`
+*Description:* ${mr.description || 'No description provided'}.
+*Priority:* ${priority}.
+See: ${mr.url}`
                         )
                     ]
                 }
