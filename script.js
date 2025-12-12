@@ -277,8 +277,9 @@ class Script {
             }
         }
 
+        const userName = typeof user === 'string' ? user : user.name;
         const attachments = commits.map(commit => {
-            if (commit.author && commit.author.name !== user) {
+            if (commit.author && commit.author.name !== userName) {
                 pushUniq(at, atName(commit.author));
             }
             return {
