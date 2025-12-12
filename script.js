@@ -102,7 +102,7 @@ const pushUniq = (array, val) => ~array.indexOf(val) || array.push(val);
 
 // Main Script Class
 class Script { 
-    process_incoming_request({ request }) {
+    process_incoming_request(request) {
         try {
             const event = request.headers['x-gitlab-event'];
             console.log("Event: " + event);
