@@ -11,7 +11,7 @@ const CONFIG = {
         "qocpp-cs-1-6", "qocpp-core-cs", "qocpp-models", "csmq-spec",
         "qocpp-core", "yaccs-secc", "evis-ccs-pm", "evis-cha-pm",
         "license-checker", "zmq-sockets", "ccs-exi-encoder", "ocppvs-backend",
-        "ocppvs-frontend"
+        "ocppvs-frontend", "ccs-interface", "v2g-module-client-itf", "codico-ccs-ctrl"
     ]
 };
 
@@ -22,6 +22,10 @@ const PROJECT_CHANNEL_MAP = new Map([
     ['csmq-spec', "qocpp"],
     ['ocpp-controller', "qocpp"],
     ['license-checker', "evis"],
+    ['qocpp-core', "qocpp"],
+    ['ccs-interface', "t-evse"],
+    ['v2g-module-client-itf', "t-evse"],
+    ['codico-ccs-ctrl', "t-evse"],
     ['yaccs-secc', "yaccs"],
     ['qocpp-cs', "qocpp"]
 ]);
@@ -30,10 +34,8 @@ const PROJECT_CHANNEL_MAP = new Map([
 const refParser = (ref) => ref.replace(/^refs\/(?:tags|heads)\/(.+)$/, '$1');
 const displayName = (name) => (name && name.toLowerCase().replace(/\s+/g, '.'));
 const resolveUser = (user) => {
-    console.log("User is " + user);
     if (!user) return '';
     const key = displayName(user);
-    console.log("key is " + key);
     return USER_MAP.get(key) || key; // fallback to the displayName itself
 };
 
@@ -63,7 +65,7 @@ const postMessageMRReady = (data) => {
     let project_name = data.merge_request.target.name;
 
     // Determine the channel based on the project
-    const channel = PROJECT_CHANNEL_MAP.get(project_name) || 'general';
+    const channel = PROJECT_CHANNEL_MAP.get(project_name) || 'stacks-prod';
 
     return {
         content: {
@@ -105,6 +107,10 @@ class Script {
             const event = request.headers['x-gitlab-event'];
             console.log("Event: " + event);
             const project = request.content.project || request.content.repository;
+            if (!project) {
+                console.log("No project found in request");
+                return false;
+            }
             const stack = CONFIG.STACKS_PROJECTS.includes(project.name);
             const handlers = {
                 'Push Hook': this.pushEvent,
@@ -126,6 +132,11 @@ class Script {
             }
             else {
                 console.log("Project is not part of stacks, ignore");
+                return {
+                    content: {
+                        text: 'Project not configured for notifications'
+                    }
+                };
             }
         } catch (e) {
             return this.handleError(e);
@@ -155,6 +166,7 @@ class Script {
 
     unknownEvent(data, event) {
         console.log(`Unknown event '${event}' occurred.`);
+        return false; // or return a proper response object
     }
 
     issueEvent(data, event) {
@@ -172,7 +184,7 @@ class Script {
         }
 
         // Determine the channel based on the project
-        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'stacks-prod';
 
         return {
             content: {
@@ -237,7 +249,7 @@ class Script {
         }
 
         // Determine the channel based on the project
-        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'stacks-prod';
 
         return {
             content: {
@@ -264,7 +276,7 @@ class Script {
         const at = [];
 
         // Determine the channel based on the project
-        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'stacks-prod';
 
         if (checkout_sha === null) {
             text = `${user} deleted branch ${ref} at ${project.name}`;
@@ -330,7 +342,7 @@ class Script {
         }
 
         // Determine the channel based on the project
-        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'stacks-prod';
 
         return {
             content: {
@@ -359,7 +371,7 @@ class Script {
         const text = `${author} pushed tag ${ref} to ${project.name}`;
         
         // Determine the channel based on the project
-        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'stacks-prod';
         
         return {
             content: {
@@ -387,7 +399,7 @@ class Script {
         console.log("Merge Status:", mr.detailed_merge_status);
 
         // Determine the channel based on the project
-        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'general';
+        const channel = PROJECT_CHANNEL_MAP.get(project.name) || 'stacks-prod';
 
         // Get priority label if available
         const priorityLabel = mr.labels?.find(label => label?.title?.startsWith('Priority'));
