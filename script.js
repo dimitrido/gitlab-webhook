@@ -298,8 +298,8 @@ class Script {
                 channel: `#${channel}`,
                 attachments: [
                     {
-                        author_name: displayName(user.name),
-                        author_icon: user.avatar_url,
+                        author_name: typeof user === 'string' ? user : displayName(user.name),
+                        author_icon: typeof user === 'string' ? '' : user.avatar_url,
                         text,
                         color: CONFIG.NOTIF_COLOR,
                         fields: attachments
@@ -322,7 +322,8 @@ class Script {
         const text = `Pipeline ${action} on ${ref} at ${project.name}`;
 
         if (commit.author) {
-            if (commit.author.name !== user.name) {
+            const userName = typeof user === 'string' ? user : user.name;
+            if (commit.author.name !== userName) {
                 pushUniq(at, atName(commit.author));
             }
         }
